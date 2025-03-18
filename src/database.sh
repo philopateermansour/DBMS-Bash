@@ -56,7 +56,7 @@ function connectToDatabase() {
 
     if [[ $isExists == 1 ]]
     then
-        SELECTED_DATABASE="$DATABASES_PATH/$databaseName"
+        SELECTED_DATABASE=$databaseName
         echo "Connected to $databaseName database"
 
         while true
@@ -75,7 +75,7 @@ function connectToDatabase() {
                 5) selectFromTable; break;;
                 6) deleteFromTable; break;;
                 7) updateTable; break;;
-                8)  SELECTED_DATABASE="";return;;
+                8) SELECTED_DATABASE=''; return;;
                 *) echo 'Invalid option number, try again...';;
                 esac
             done
