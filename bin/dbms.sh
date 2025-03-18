@@ -14,8 +14,8 @@ do
         case $REPLY in
         1) createDatabase; break;;
         2) listDatabases; break;;
-        # 3) Handling; break;;
-        # 4) Handling; break;;
+        3) connectToDatabase; break;;
+        4) dropDatabase; break;;
         5) exit 0;;
         *) echo 'Invalid option number, try again...';;
         esac
