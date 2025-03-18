@@ -2,7 +2,6 @@
 
 source ../src/config.sh
 source ../src/database.sh
-source ../src/table.sh
 
 while true
 do
