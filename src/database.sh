@@ -49,3 +49,65 @@ function listDatabases() {
 
     read -p 'Press ENTER to return to the main menu'
 }
+
+function connectToDatabase() {
+    clear
+    databasesPath='../databases'
+    read -p 'Enter database name you want to connect to: ' databaseName
+    
+    isExists=`isDatabaseExists $databaseName`
+
+    if [[ $isExists == 1 ]]
+    then
+        cd "$databasesPath/$databaseName"
+        echo "Connected to $databaseNAme database"
+
+        while true
+        do
+            clear
+            echo -e "Connected to Database: $databaseName database\nDatabase Menu:"
+            PS3='Enter your choice number: '
+
+            select userInput in 'Create Table' 'List Tables' 'Drop Table' 'Insert into Table' 'Select from Table' 'Delete from Table' 'Update Table' 'Back to Main Menu'
+            do
+                case $REPLY in
+                1) createTable; break;;
+                2) listTables; break;;
+                3) dropTable; break;;
+                4) insertIntoTable; break;;
+                5) selectFromTable; break;;
+                6) deleteFromTable; break;;
+                7) updateTable; break;;
+                8) return;;
+                *) echo 'Invalid option number, try again...';;
+                esac
+            done
+        done
+    else
+        echo 'Database does not exist' >&2
+        read -p 'Press ENTER to return to the main menu'
+    fi    
+
+}
+
+function dropDatabase() {
+    clear
+    databasesPath='../databases'
+    read -p 'Enter database name you want to drop: ' databaseName
+
+    isExists=`isDatabaseExists $databaseName`
+
+    if [[ $isExists == 1 ]]
+    then
+        rm -r "$databasesPath/$databaseName"
+        if [[ $? == 0 ]]
+        then
+            echo "Database $databaseNAme dropped" >&1
+        else
+            echo "Try again later, Because there is an error occured" >&2
+        fi
+    else
+        echo 'Database does not exist' >&2
+        read -p 'Press ENTER to return to the main menu'
+    fi   
+}
