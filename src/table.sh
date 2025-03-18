@@ -77,7 +77,7 @@ function createTable() {
                 types+="$columnType:"
                 break
             else
-                echo "Invalid data typr, you must choose between str or int" >&2
+                echo "Invalid data type, you must choose between str or int" >&2
             fi
         done
         
@@ -107,11 +107,38 @@ function createTable() {
 }
 
 function listTables() {
-    clear
+    echo "Tables List:" >&1
+
+    ls $DATABASES_PATH/$SELECTED_DATABASE/*.txt | \
+    awk 'BEGIN{FS="/"}
+    {
+        print "-", substr($4, 0, (length($4) - 4))
+    }'
+
+    read -p 'Press ENTER to return to the database menu'
 }
 
 function dropTable() {
-    clear
+    read -p 'Enter table name: ' tableName
+
+    isExists=`isTableExists $tableName`
+
+    if [[ $isExists == 1 ]]
+    then
+        rm $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt
+        rm $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt
+
+        if [[ $? == 0 ]]
+        then
+            echo "Table $tableName dropped successfully" >&1
+        else
+            echo 'An error occurred. Please try again later' >&2
+        fi
+    else
+        echo "Table [$tableName] does not exist in database [$SELECTED_DATABASE]." >&2
+    fi
+
+    read -p 'Press ENTER to return to the database menu'
 }
 
 function insertIntoTable() {
