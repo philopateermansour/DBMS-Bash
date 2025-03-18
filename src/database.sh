@@ -1,6 +1,6 @@
 #! /bin/bash
 
-source table.sh
+source ../src/table.sh
 
 function createDatabase() {
     clear
