@@ -20,8 +20,9 @@ function validateDataType() {
         echo 0
     fi
 }
+
 function validateName() {
-    if [[ $1 =~ ^[a-Z][a-Z0-9_]+$ ]]
+    if [[ "$1" =~ ^[a-zA-Z][a-zA-Z0-9_]+$ ]]
     then
         echo 1
     else

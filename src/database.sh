@@ -4,7 +4,18 @@ source ../src/table.sh
 
 function createDatabase() {
     clear
-    read -p 'Enter database name: ' databaseName
+    while true
+    do
+        read -p 'Enter database name: ' databaseName
+        isValid=`validateName "$databaseName"`
+
+        if [[ $isValid == 0 ]]
+        then
+            echo "Invalid name, name must start whith character and contains alphanumeric characters and underscores only" >&2
+        else
+            break
+        fi
+    done
 
     isExists=`isDatabaseExists $databaseName`
 
