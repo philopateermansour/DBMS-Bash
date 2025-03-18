@@ -1,5 +1,6 @@
 #! /bin/bash
 
+source ../src/config.sh
 source ../src/database.sh
 source ../src/table.sh
 

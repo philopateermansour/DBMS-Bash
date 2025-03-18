@@ -2,7 +2,6 @@
 
 function createDatabase() {
     clear
-    databasesPath='../databases'
     read -p 'Enter database name: ' databaseName
 
     isExists=`isDatabaseExists $databaseName`
@@ -11,7 +10,7 @@ function createDatabase() {
     then
         echo 'Database already exists' >&2
     else
-        mkdir "$databasesPath/$databaseName"
+        mkdir "$DATABASES_PATH/$databaseName"
 
         if [[ $? == 0 ]]
         then
@@ -25,11 +24,9 @@ function createDatabase() {
 }
 
 function isDatabaseExists() {
-    databasesPath='../databases'
-
-    for currentDatabase in `ls $databasesPath`
+    for currentDatabase in `ls $DATABASES_PATH`
     do
-        if [[ -d $databasesPath/$currentDatabase && $currentDatabase == $1 ]]
+        if [[ -d $DATABASES_PATH/$currentDatabase && $currentDatabase == $1 ]]
         then
             echo 1
             break
@@ -39,10 +36,9 @@ function isDatabaseExists() {
 
 function listDatabases() {
     clear
-    databasesPath='../databases'
-
     echo 'Your databases:'
-    for currentDatabase in `ls $databasesPath`
+
+    for currentDatabase in `ls $DATABASES_PATH`
     do
         echo "- $currentDatabase" >&1
     done
@@ -52,15 +48,14 @@ function listDatabases() {
 
 function connectToDatabase() {
     clear
-    databasesPath='../databases'
     read -p 'Enter database name you want to connect to: ' databaseName
     
     isExists=`isDatabaseExists $databaseName`
 
     if [[ $isExists == 1 ]]
     then
-        cd "$databasesPath/$databaseName"
-        echo "Connected to $databaseNAme database"
+        cd "$DATABASES_PATH/$databaseName"
+        echo "Connected to $databaseName database"
 
         while true
         do
@@ -92,22 +87,22 @@ function connectToDatabase() {
 
 function dropDatabase() {
     clear
-    databasesPath='../databases'
     read -p 'Enter database name you want to drop: ' databaseName
 
     isExists=`isDatabaseExists $databaseName`
 
     if [[ $isExists == 1 ]]
     then
-        rm -r "$databasesPath/$databaseName"
+        rm -r "$DATABASES_PATH/$databaseName"
         if [[ $? == 0 ]]
         then
-            echo "Database $databaseNAme dropped" >&1
+            echo "Database $databaseName dropped" >&1
         else
             echo "Try again later, Because there is an error occured" >&2
         fi
     else
         echo 'Database does not exist' >&2
-        read -p 'Press ENTER to return to the main menu'
-    fi   
+    fi
+
+    read -p 'Press ENTER to return to the main menu'
 }
