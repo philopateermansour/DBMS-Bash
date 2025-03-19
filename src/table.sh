@@ -167,6 +167,58 @@ function insertIntoTable() {
 
 function selectFromTable() {
     clear
+
+    while true
+    do
+        read -p 'Enter table name: ' tableName
+        isExists=`isTableExists $tableName`
+        if [[ $isExists -eq 1 ]]
+        then
+            break
+        else
+            echo "Table [$tableName] does not exist in database [$SELECTED_DATABASE]." >&2
+        fi
+    done
+    
+    while true
+    do
+        read -p 'Enter column name: ' columnName
+        columnNumber=`isColumnExists $tableName $columnName`
+        if [[ $columnNumber =~ ^[0-9]+$ && $columnNumber -ne 0 ]]
+        then
+            break
+        else
+            echo "Column [$columnName] does not exist in table [$tableName]." >&2
+        fi
+    done
+
+    read -p 'Enter condition value: ' value
+
+    awk '
+    BEGIN{
+        FS=":"
+        print "----------------------------------------------------"
+    }
+    {printf "| %-14s ", $1}
+    END{printf "\n----------------------------------------------------\n"}
+    ' $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt 
+
+    awk -v value="$value" -v columnNumber=$columnNumber '
+    BEGIN {
+        FS=":"
+    }
+    {
+        if($columnNumber == value) {
+            for(counter=1; counter<=NF; counter++) {
+                printf "| %-14s ", $counter
+            }
+            printf "|\n"
+            print "----------------------------------------------------"
+        }
+    }
+    ' $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt
+
+    read -p 'Press ENTER to return to the database menu'
 }
 
 function deleteFromTable() {

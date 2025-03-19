@@ -1,5 +1,16 @@
 #! /bin/bash
 
+function isDatabaseExists() {
+    for currentDatabase in `ls $DATABASES_PATH`
+    do
+        if [[ -d $DATABASES_PATH/$currentDatabase && $currentDatabase == $1 ]]
+        then
+            echo 1
+            break
+        fi
+    done
+}
+
 function isTableExists() {
     fullPath=$DATABASES_PATH/$SELECTED_DATABASE
     for currentTable in `ls $fullPath/`
@@ -10,6 +21,14 @@ function isTableExists() {
             break
         fi
     done
+}
+
+function isColumnExists() {
+    awk -v fieldName=$2 '
+    BEGIN {FS=":"}
+    {
+        if($1 == fieldName) print NR
+    }' $DATABASES_PATH/$SELECTED_DATABASE/.$1-md.txt
 }
 
 function validatePositiveInteger() {
