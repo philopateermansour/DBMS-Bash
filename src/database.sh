@@ -36,17 +36,6 @@ function createDatabase() {
     read -p 'Press ENTER to return to the main menu'
 }
 
-function isDatabaseExists() {
-    for currentDatabase in `ls $DATABASES_PATH`
-    do
-        if [[ -d $DATABASES_PATH/$currentDatabase && $currentDatabase == $1 ]]
-        then
-            echo 1
-            break
-        fi
-    done
-}
-
 function listDatabases() {
     clear
     echo 'Your databases:'
