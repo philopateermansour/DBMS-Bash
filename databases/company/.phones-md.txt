@@ -1,0 +1,4 @@
+phone:user_id
+str:str
+PK:phone
+FK:user_id>id<id

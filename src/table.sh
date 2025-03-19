@@ -2,17 +2,6 @@
 
 source ../src/validation.sh
 
-function isTableExists() {
-    fullPath=$DATABASES_PATH/$SELECTED_DATABASE
-    for currentTable in `ls $fullPath/`
-    do
-        if [[ -f "$fullPath/$currentTable" && $currentTable == $1.txt ]]
-        then
-            echo 1
-            break
-        fi
-    done
-}
 
 function createTable() {
     clear
@@ -52,11 +41,11 @@ function createTable() {
 
     names=""
     types=""
-    primaryKeySet=0
+    primaryKeyColumn=""
 
     for ((i=1;i<=$noOfColumns;i++))
     do
-
+        clear
         while true 
         do
             read -p "Enter column $i name: " columnName
@@ -80,23 +69,70 @@ function createTable() {
                 echo "Invalid data type, you must choose between str or int" >&2
             fi
         done
-        
-        if [ $primaryKeySet == 0 ] 
+        if [[ "$columnType" == "int" ]] 
         then
-            read -p "Do you want $columnName be the primary key (yes for confirmation any thing else to cancel): " isPrimaryKey
-            if [[ $isPrimaryKey =~ ^[yY](es)? ]] 
+            read -p "Do you want $columnName to auto-increment (yes for confirmation, anything else to cancel): " isAutoIncrement
+            if [[ $isAutoIncrement =~ ^[yY]([eE]?[sS]?)$ ]] 
             then
-                primaryKeySet=1
-                primaryKeyColumn="$columnName"
+                autoIncrementColumn="$columnName"
             fi
         fi
+        
+        if [[ -z $primaryKeyColumn ]] 
+        then
+            read -p "Do you want $columnName be the primary key (yes for confirmation any thing else to cancel): " isPrimaryKey
+            if [[ $isPrimaryKey =~ ^[yY]([eE]?[sS]?)$ ]] 
+            then
+                primaryKeyColumn="$columnName"
+                continue
+            fi
+        fi
+
+        read -p "Do you want $columnName to be unique (yes for confirmation, anything else to cancel): " isUnique
+        if [[ $isUnique =~ ^[yY]([eE]?[sS]?)$ ]] 
+        then
+            uniqueColumns+="$columnName:"
+        fi
+
+        read -p "Do you want $columnName to be a foreign key (yes for confirmation, anything else to cancel): " isForeignKey
+        if [[ $isForeignKey =~ ^[yY]([eE]?[sS]?)$ ]] 
+        then
+            while true 
+                        do
+                            read -p "Enter the referenced table: " foreignKeyTable
+                            read -p "Enter the referenced column: " foreignKeyColumn
+                            if [[ `validateForeignKey $foreignKeyTable $foreignKeyColumn` == 1 ]]
+                            then
+                                foreignKeys+="$columnName>$foreignKeyColumn<$foreignKeyColumn:"
+                                break
+                            else
+                                echo "Invalid key, make sure of the table and key" >&2
+                            fi
+                        done
+        fi
+
     done
 
     echo ${names::-1} >> $fullPath/$mdFile
     echo ${types::-1} >> $fullPath/$mdFile
-    if [[ $primaryKeySet == 1 ]]
+    if [[ -n "$primaryKeyColumn" ]]
     then
         echo "PK:$primaryKeyColumn" >> $fullPath/$mdFile
+    fi
+
+    if [[ -n "$uniqueColumns" ]]
+    then
+        echo "UNIQUE:${uniqueColumns::-1}" >> $fullPath/$mdFile
+    fi
+
+    if [[ -n "$foreignKeys" ]]
+    then
+        echo "FK:${foreignKeys::-1}" >> $fullPath/$mdFile
+    fi
+
+    if [[ -n "$autoIncrementColumn" ]]
+    then
+        echo "AI:$autoIncrementColumn" >> $fullPath/$mdFile
     fi
 
     dataFile="$tableName.txt"
