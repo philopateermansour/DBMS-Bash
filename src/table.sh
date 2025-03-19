@@ -12,7 +12,7 @@ function createTable() {
             then
                 break
             else
-                echo "Invalid name, name must start whith character and contains alphanumeric characters and underscores only" >&2
+                echo "Invalid name, name must start with a character and contain alphanumeric characters and underscores only" >&2
             fi
         done
 
@@ -39,8 +39,7 @@ function createTable() {
     fullPath=$DATABASES_PATH/$SELECTED_DATABASE
     touch $fullPath/$mdFile
 
-    names=""
-    types=""
+    metadata=""
     primaryKeyColumn=""
 
     for ((i=1;i<=$noOfColumns;i++))
@@ -51,10 +50,9 @@ function createTable() {
             read -p "Enter column $i name: " columnName
             if [[ `validateName $columnName` == 1 ]]
             then
-                names+="$columnName:"
                 break
             else
-                echo "Invalid name, name must start whith character and contains alphanumeric characters and underscores only" >&2
+                echo "Invalid name, name must start with a character and contain alphanumeric characters and underscores only" >&2
             fi
         done
 
@@ -63,77 +61,63 @@ function createTable() {
             read -p "Enter column $i data type (str or int): " columnType
             if [[ `validateDataType $columnType` == 1 ]]
             then
-                types+="$columnType:"
                 break
             else
                 echo "Invalid data type, you must choose between str or int" >&2
             fi
         done
+
+        pkSet=0
+        aiSet=0
+        uniqueSet=0
+        fkReference="0"
+
         if [[ "$columnType" == "int" ]] 
         then
             read -p "Do you want $columnName to auto-increment (yes for confirmation, anything else to cancel): " isAutoIncrement
             if [[ $isAutoIncrement =~ ^[yY]([eE]?[sS]?)$ ]] 
             then
-                autoIncrementColumn="$columnName"
+                aiSet=1
             fi
         fi
         
         if [[ -z $primaryKeyColumn ]] 
         then
-            read -p "Do you want $columnName be the primary key (yes for confirmation any thing else to cancel): " isPrimaryKey
+            read -p "Do you want $columnName to be the primary key (yes for confirmation, anything else to cancel): " isPrimaryKey
             if [[ $isPrimaryKey =~ ^[yY]([eE]?[sS]?)$ ]] 
             then
+                pkSet=1
                 primaryKeyColumn="$columnName"
-                continue
             fi
         fi
 
         read -p "Do you want $columnName to be unique (yes for confirmation, anything else to cancel): " isUnique
         if [[ $isUnique =~ ^[yY]([eE]?[sS]?)$ ]] 
         then
-            uniqueColumns+="$columnName:"
+            uniqueSet=1
         fi
 
         read -p "Do you want $columnName to be a foreign key (yes for confirmation, anything else to cancel): " isForeignKey
         if [[ $isForeignKey =~ ^[yY]([eE]?[sS]?)$ ]] 
         then
             while true 
-                        do
-                            read -p "Enter the referenced table: " foreignKeyTable
-                            read -p "Enter the referenced column: " foreignKeyColumn
-                            if [[ `validateForeignKey $foreignKeyTable $foreignKeyColumn` == 1 ]]
-                            then
-                                foreignKeys+="$columnName>$foreignKeyColumn<$foreignKeyColumn:"
-                                break
-                            else
-                                echo "Invalid key, make sure of the table and key" >&2
-                            fi
-                        done
+            do
+                read -p "Enter the referenced table: " foreignKeyTable
+                read -p "Enter the referenced column: " foreignKeyColumn
+                if [[ `validateForeignKey $foreignKeyTable $foreignKeyColumn` == 1 ]]
+                then
+                    fkReference="$foreignKeyTable.$foreignKeyColumn"
+                    break
+                else
+                    echo "Invalid key, make sure of the table and key" >&2
+                fi
+            done
         fi
 
+        metadata+="$columnName:$columnType:$pkSet:$aiSet:$uniqueSet:$fkReference\n"
     done
 
-    echo ${names::-1} >> $fullPath/$mdFile
-    echo ${types::-1} >> $fullPath/$mdFile
-    if [[ -n "$primaryKeyColumn" ]]
-    then
-        echo "PK:$primaryKeyColumn" >> $fullPath/$mdFile
-    fi
-
-    if [[ -n "$uniqueColumns" ]]
-    then
-        echo "UNIQUE:${uniqueColumns::-1}" >> $fullPath/$mdFile
-    fi
-
-    if [[ -n "$foreignKeys" ]]
-    then
-        echo "FK:${foreignKeys::-1}" >> $fullPath/$mdFile
-    fi
-
-    if [[ -n "$autoIncrementColumn" ]]
-    then
-        echo "AI:$autoIncrementColumn" >> $fullPath/$mdFile
-    fi
+    echo -e "$metadata" >> $fullPath/$mdFile
 
     dataFile="$tableName.txt"
     touch $fullPath/$dataFile
