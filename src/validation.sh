@@ -70,3 +70,11 @@ function validateForeignKey() {
         echo 0
     fi
 }
+
+function validateString() {
+    [[ $1 =~ ^[a-zA-Z0-9_\ ]+$ ]] && echo 1 || echo 0
+}
+
+function validateInteger() {
+    [[ $1 =~ ^([0-9]|[1-9][0-9]*)$ ]] && echo 1 || echo 0
+}

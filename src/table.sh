@@ -233,5 +233,86 @@ function deleteFromTable() {
 }
 
 function updateTable() {
+    clear
+
+    while true
+    do
+        read -p 'Enter table name: ' tableName
+        isExists=`isTableExists $tableName`
+        if [[ $isExists -eq 1 ]]
+        then
+            break
+        else
+            echo "Table [$tableName] does not exist in database [$SELECTED_DATABASE]." >&2
+        fi
+    done
     
+    while true
+    do
+        read -p 'Enter column name: ' columnName
+        columnNumber=`isColumnExists $tableName $columnName`
+        if [[ $columnNumber =~ ^[0-9]+$ && $columnNumber -ne 0 ]]
+        then
+            break
+        else
+            echo "Column [$columnName] does not exist in table [$tableName]." >&2
+        fi
+    done
+    
+    while true
+    do
+        read -p 'Enter the old value: ' oldValue
+        columnDataType=`getColumnDataType $tableName $columnName`
+        if [[ $columnDataType == 'str' ]]
+        then
+            isValid=`validateString $oldValue`
+        elif [[ $columnDataType == 'int' ]]
+        then
+            isValid=`validateInteger $oldValue`
+        fi
+
+        if [[ $isValid -eq 1 ]]
+        then
+            break
+        else
+            echo "Invalid value." >&2
+        fi
+    done
+    
+    while true
+    do
+        read -p 'Enter the new value: ' newValue
+        columnDataType=`getColumnDataType $tableName $columnName`
+        if [[ $columnDataType == 'str' ]]
+        then
+            isValid=`validateString $newValue`
+        elif [[ $columnDataType == 'int' ]]
+        then
+            isValid=`validateInteger $newValue`
+        fi
+
+        if [[ $isValid -eq 1 ]]
+        then
+            break
+        else
+            echo "Invalid value." >&2
+        fi
+    done
+    
+    awk -v columnNumber=$columnNumber -v oldValue=$oldValue -v newValue=$newValue '
+    BEGIN{FS=":"; OFS=":"}
+    {
+        sub(oldValue,newValue,$columnNumber);
+        printf "%s\n", $0
+    }' $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt > temp.txt && mv temp.txt $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt
+
+    read -p 'Press ENTER to return to the database menu'
+}
+
+function getColumnDataType() {
+    awk -v fieldName=$2 '
+    BEGIN {FS=":"}
+    {
+        if($1 == fieldName) print $2
+    }' $DATABASES_PATH/$SELECTED_DATABASE/.$1-md.txt
 }
