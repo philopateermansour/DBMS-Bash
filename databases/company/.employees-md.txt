@@ -1,4 +1,3 @@
 id:int:1:0:0:0
 name:str:0:0:0:0
 department_id:int:0:0:0:departments.id
-

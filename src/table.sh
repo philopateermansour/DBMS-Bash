@@ -194,26 +194,33 @@ function selectFromTable() {
 
     read -p 'Enter condition value: ' value
 
-    awk '
+    numberOfColumns=`wc -l $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt`
+
+    awk -v columnCounter="${numberOfColumns[@]:0:1}" '
     BEGIN{
         FS=":"
-        print "----------------------------------------------------"
+        for(counter=0; counter<columnCounter; counter++) printf "\b------------------"
+        printf "\n"
     }
     {printf "| %-14s ", $1}
-    END{printf "\n----------------------------------------------------\n"}
+    END{
+        printf "|\n"
+        for(counter=0; counter<columnCounter; counter++) printf "\b------------------"
+        printf "\n"
+    }
     ' $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt 
 
-    awk -v value="$value" -v columnNumber=$columnNumber '
-    BEGIN {
-        FS=":"
-    }
+    awk -v value="$value" -v columnNumber=$columnNumber -v columnCounter="${numberOfColumns[@]:0:1}" '
+    BEGIN {FS=":"}
     {
         if($columnNumber == value) {
             for(counter=1; counter<=NF; counter++) {
                 printf "| %-14s ", $counter
             }
+
             printf "|\n"
-            print "----------------------------------------------------"
+            for(counter=0; counter<columnCounter; counter++) printf "\b------------------"
+            printf "\n"
         }
     }
     ' $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt
@@ -226,5 +233,5 @@ function deleteFromTable() {
 }
 
 function updateTable() {
-    clear
+    
 }
