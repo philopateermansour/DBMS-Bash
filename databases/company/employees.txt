@@ -1,5 +1,4 @@
 1:Mamoun:101
-2:Jane:102
 3:Michael:101
 4:Emily:103
 5:David:102
@@ -17,4 +16,3 @@
 17:Joseph:105
 18:Isabella:104
 19:Andrew:103
-20:Mia:102

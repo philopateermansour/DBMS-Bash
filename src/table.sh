@@ -230,6 +230,55 @@ function selectFromTable() {
 
 function deleteFromTable() {
     clear
+    read -p 'Enter table name: ' tableName
+
+    isExists=`isTableExists $tableName`
+
+    if [[ $isExists == 1 ]]
+    then
+        fullPath=$DATABASES_PATH/$SELECTED_DATABASE
+        dataFile="$tableName.txt"
+
+        while true
+        do
+            read -p "Enter the column name to delete by: " columnName
+            columnNumber=`isColumnExists $tableName $columnName`
+            
+            if [[ -n $columnNumber ]]
+            then
+                break
+            else
+                echo "Column [$columnName] does not exist in table [$tableName]." >&2
+            fi
+        done
+        
+        while true
+        do
+            read -p "Enter the value to delete: " valueToDelete
+            if [[ -n $valueToDelete ]]
+            then
+                break
+            else
+                echo "Invalid value, please enter a value (nt empty)" >&2
+            fi
+        done
+
+        awk -v col="$columnNumber" -v val="$valueToDelete" -v file="$fullPath/$dataFile.tmp" '
+        BEGIN {FS=":"; OFS=":"} 
+        { if ($col != val) print $0 > file }' "$fullPath/$dataFile"
+
+        if [[ $(wc -l < "$fullPath/$dataFile.tmp") -lt $(wc -l < "$fullPath/$dataFile") ]]
+        then
+            mv "$fullPath/$dataFile.tmp" "$fullPath/$dataFile"
+            echo "Record deleted successfully" >&1
+        else
+            rm "$fullPath/$dataFile.tmp"
+            echo "Record not found in the specified column" >&2
+        fi
+    else
+        echo "Table [$tableName] does not exist in database [$SELECTED_DATABASE]." >&2
+    fi
+    read -p 'Press ENTER to return to the database menu'
 }
 
 function updateTable() {
