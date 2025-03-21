@@ -163,6 +163,87 @@ function dropTable() {
 
 function insertIntoTable() {
     clear
+    while true
+    do
+        read -p 'Enter table name: ' tableName
+        isExists=`isTableExists $tableName`
+        if [[ $isExists == 1 ]]
+        then
+            break
+        else
+            echo "Table [$tableName] does not exist in database [$SELECTED_DATABASE]." >&2
+        fi
+    done
+
+    fullPath=$DATABASES_PATH/$SELECTED_DATABASE
+    metadataFile=".$tableName-md.txt"
+    dataFile="$tableName.txt"
+    
+    columns=()
+    types=()
+    pk=""
+    pkIndex=-1
+    i=-1
+    while IFS=: read -r column type primaryKey _
+    do
+        columns+=($column)
+        types+=($type)
+        ((i+=1))
+        if [[ $primaryKey == 1 ]]
+        then
+            pk=$column
+            pkIndex=$i
+        fi
+    done < "$fullPath/$metadataFile"
+
+    values=""
+    noOfFields=${#columns[@]}
+    for ((i=0; i<$noOfFields; i++))
+    do
+        columnName="${columns[$i]}"
+        columnType="${types[$i]}"
+        
+        while true 
+        do
+            read -p "Enter value for $columnName ($columnType): " value
+
+            if [[ $columnType == "int" && ! $value =~ ^[0-9]+$ ]] 
+            then
+                echo "Invalid value, you must send number" >&2
+                continue
+            fi
+
+            if [[ $i -eq $pkIndex ]] 
+            then
+                if ! awk -F: -v pk="$(($pkIndex + 1))" -v val="$value" '
+                {
+                if ($pk == val) 
+                    exit 1}
+                ' "$fullPath/$dataFile"
+                then
+                    echo "Primary key has to be a unique value" >&2
+                    continue
+                fi
+            fi
+
+
+        if [[ -z "$values" ]]
+        then
+            values="$value"
+        else
+            values+=":$value"
+        fi 
+
+        break
+
+        done
+    done
+
+    echo $values >> "$fullPath/$dataFile"
+
+    echo "Record inserted successfully." >&1
+    read -p 'Press ENTER to return to the database menu'
+
 }
 
 function selectFromTable() {
