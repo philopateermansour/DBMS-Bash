@@ -43,7 +43,7 @@ function validatePositiveInteger() {
 
 function validateDataType() {
 
-    if [[ $1 == "str" || $1 == "int" ]] 
+    if [[ $1 == "str" || $1 == "int" || $1 == "float" || $1 == "char" || $1 == "bool" || $1 == "date" ]] 
     then
         echo 1
     else

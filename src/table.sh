@@ -58,12 +58,12 @@ function createTable() {
 
         while true 
         do
-            read -p "Enter column $i data type (str or int): " columnType
+            read -p "Enter column $i data type (str, int, float, char, bool, date): " columnType
             if [[ `validateDataType $columnType` == 1 ]]
             then
                 break
             else
-                echo "Invalid data type, you must choose between str or int" >&2
+                echo "Invalid data type, you must choose between (str, int, float, char, bool, date)" >&2
             fi
         done
 
