@@ -1,0 +1,7 @@
+int:int:0:0:0:0
+float:float:0:0:0:0
+char:char:0:0:0:0
+str:str:0:0:0:0
+bool:bool:0:0:0:0
+date:date:0:0:0:0
+

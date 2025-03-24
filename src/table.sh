@@ -181,18 +181,21 @@ function insertIntoTable() {
     
     columns=()
     types=()
-    pk=""
+    uniques=()
     pkIndex=-1
     i=-1
-    while IFS=: read -r column type primaryKey _
+    while IFS=: read -r column type primaryKey autoIncrement unique foreignKey
     do
         columns+=($column)
         types+=($type)
         ((i+=1))
         if [[ $primaryKey == 1 ]]
         then
-            pk=$column
             pkIndex=$i
+        fi
+        if [[ $unique == 1 ]]
+        then
+            uniques+=($i)
         fi
     done < "$fullPath/$metadataFile"
 
@@ -200,16 +203,47 @@ function insertIntoTable() {
     noOfFields=${#columns[@]}
     for ((i=0; i<$noOfFields; i++))
     do
+        clear
         columnName="${columns[$i]}"
         columnType="${types[$i]}"
         
         while true 
         do
-            read -p "Enter value for $columnName ($columnType): " value
+            read -r -p "Enter value for $columnName ($columnType): " value
 
-            if [[ $columnType == "int" && ! $value =~ ^[0-9]+$ ]] 
+            if [[ $columnType == "int" && $(validateInteger "$value") == 0  ]] 
             then
                 echo "Invalid value, you must send number" >&2
+                continue
+            fi
+
+            if [[ $columnType == "str" && $(validateString "$value") == 0 ]] 
+            then
+                echo "Invalid value, string cannot be empty or and can only contain letters, numbers, underscores, and spaces" >&2
+                continue
+            fi
+
+            if [[ $columnType == "float" && $(validateFloat "$value") == 0 ]] 
+            then
+                echo "Invalid value, you must send a float" >&2
+                continue
+            fi
+
+            if [[ $columnType == "bool" && $(validateBoolean "$value") == 0 ]] 
+            then
+                echo "Invalid value, you must send true or false" >&2
+                continue
+            fi
+
+            if [[ $columnType == "date" && $(validateDate "$value") == 0 ]] 
+            then
+                echo "Invalid value, you must send a valid date (MM/DD/YYYY)" >&2
+                continue
+            fi
+
+            if [[ $columnType == "char" && $(validateChar "$value") == 0 ]] 
+            then
+                echo "Invalid value, you must send a single character" >&2
                 continue
             fi
 
@@ -226,15 +260,33 @@ function insertIntoTable() {
                 fi
             fi
 
+            for uniqueIndex in "${uniques[@]}"
+            do
+                if [[ $i == $uniqueIndex ]]
+                then
+                    if awk -F: -v col="$((uniqueIndex+1))" -v val="$value" '
+                    {
+                        if ($col == val) 
+                            exit 1
+                    }
+                    ' "$fullPath/$dataFile"
+                    then
+                        break
+                    else
+                        echo "Value must be unique" >&2
+                        continue 2
+                    fi
+                fi
+            done
+        
 
-        if [[ -z "$values" ]]
-        then
-            values="$value"
-        else
-            values+=":$value"
-        fi 
-
-        break
+            if [[ -z "$values" ]]
+            then
+                values="$value"
+            else
+                values+=":$value"
+            fi 
+            break
 
         done
     done
