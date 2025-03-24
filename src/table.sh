@@ -325,6 +325,13 @@ function selectFromTable() {
         fi
     done
 
+    while true
+    do
+        read -p 'Enter select condition: ' selectCondition
+        [[ $selectCondition =~ ^(">"|"<"|"="|">="|"<="|"!=")$ ]] && break
+        echo 'Invalid condition, you must enter a valid condition (>, <, =, >=, <=, !=)' >&2
+    done
+
     read -p 'Enter condition value: ' value
 
     numberOfColumns=`wc -l $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt`
@@ -343,20 +350,25 @@ function selectFromTable() {
     }
     ' $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt 
 
-    awk -v value="$value" -v columnNumber=$columnNumber -v columnCounter="${numberOfColumns[@]:0:1}" '
+    awk -v columnNumber="$columnNumber" -v val="$value" -v condition="$selectCondition" -v columnCounter="${numberOfColumns[@]:0:1}" '
     BEGIN {FS=":"}
     {
-        if($columnNumber == value) {
-            for(counter=1; counter<=NF; counter++) {
-                printf "| %-14s ", $counter
-            }
+        rowMatched = 0
+        if      (condition == "="  && $columnNumber == val) rowMatched = 1
+        else if (condition == ">"  && $columnNumber >  val) rowMatched = 1
+        else if (condition == "<"  && $columnNumber <  val) rowMatched = 1
+        else if (condition == ">=" && $columnNumber >= val) rowMatched = 1
+        else if (condition == "<=" && $columnNumber <= val) rowMatched = 1
+        else if (condition == "!=" && $columnNumber != val) rowMatched = 1
 
+
+        if (rowMatched == 1) {
+            for(counter=1; counter<=NF; counter++) printf "| %-14s ", $counter
             printf "|\n"
             for(counter=0; counter<columnCounter; counter++) printf "\b------------------"
             printf "\n"
         }
-    }
-    ' $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt
+    }' $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt
 
     read -p 'Press ENTER to return to the database menu'
 }
