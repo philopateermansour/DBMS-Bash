@@ -78,3 +78,19 @@ function validateString() {
 function validateInteger() {
     [[ $1 =~ ^([0-9]|[1-9][0-9]*)$ ]] && echo 1 || echo 0
 }
+
+function validateFloat() {
+    [[ $1 =~ ^[0-9]*\.?[0-9]+$ ]] && echo 1 || echo 0
+}
+
+function validateBoolean() {
+    [[ $1 == "true" || $1 == "false" ]] && echo 1 || echo 0
+}
+
+function validateDate() {
+    [[ $1 =~ ^(0[1-9]|1[0-2])/([0-2][0-9]|3[01])/([0-9]{4})$ ]] && echo 1 || echo 0
+}
+
+function validateChar() {
+    [[ $1 =~ ^.$ ]] && echo 1 || echo 0
+}
