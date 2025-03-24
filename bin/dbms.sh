@@ -1,5 +1,7 @@
 #! /bin/bash
 
+shopt -s extglob
+
 source ../src/config.sh
 source ../src/database.sh
 
@@ -16,7 +18,7 @@ do
         2) listDatabases; break;;
         3) connectToDatabase; break;;
         4) dropDatabase; break;;
-        5) exit 0;;
+        5) echo "Good Bye, $USER."; exit 0;;
         *) echo 'Invalid option number, try again...';;
         esac
     done
