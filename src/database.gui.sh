@@ -49,3 +49,21 @@ function dropDatabase() {
        zenity --info --text="Database $databaseName dropped successfully";;
     esac
 }
+
+function databaseMenu() {
+    userInput=`zenity --list --width=500 --height=500\
+    --title="Database Menu" --text="Connected to $SELECTED_DATABASE database"\
+    --column="Options" "Create a table" "List all tables" "Drop a table" "Insert into a table"\
+    "Select from a table" "Delete from a table" "Update a table" "Back to main menu"`
+
+    case $userInput in
+    "Create a table") createTable;;
+    "List all tables") listTables;;
+    "Drop a table") dropTable;;
+    "Insert into a table") insertIntoTable;;
+    "Select from a table") selectFromTable;;
+    "Delete from a table") deleteFromTable;;
+    "Update a table") updateTable;;
+    "Back to main menu") SELECTED_DATABASE=''; return 1;;
+    esac
+}
