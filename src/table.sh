@@ -91,10 +91,13 @@ function createTable() {
             fi
         fi
 
-        read -p "Do you want $columnName to be unique (yes for confirmation, anything else to cancel): " isUnique
-        if [[ $isUnique =~ ^[yY]([eE]?[sS]?)$ ]] 
+        if [[ $pkSet == 0 ]]
         then
-            uniqueSet=1
+            read -p "Do you want $columnName to be unique (yes for confirmation, anything else to cancel): " isUnique
+            if [[ $isUnique =~ ^[yY]([eE]?[sS]?)$ ]] 
+            then
+                uniqueSet=1
+            fi
         fi
 
         read -p "Do you want $columnName to be a foreign key (yes for confirmation, anything else to cancel): " isForeignKey
@@ -396,6 +399,17 @@ function deleteFromTable() {
                 echo "Column [$columnName] does not exist in table [$tableName]." >&2
             fi
         done
+
+        while true
+        do
+            read -p "Enter the operator: " operator
+            if [[ -n $operator && $operator =~ ^(">"|"<"|"="|">="|"<="|"!=")$ ]]
+            then
+                break
+            else
+                echo "Invalid operator, you must enter a valid operator (>, <, =, >=, <=, !=)" >&2
+            fi
+        done
         
         while true
         do
@@ -408,9 +422,19 @@ function deleteFromTable() {
             fi
         done
 
-        awk -v col="$columnNumber" -v val="$valueToDelete" -v file="$fullPath/$dataFile.tmp" '
+        awk -v col="$columnNumber" -v val="$valueToDelete" -v op="$operator" -v file="$fullPath/$dataFile.tmp" '
         BEGIN {FS=":"; OFS=":"} 
-        { if ($col != val) print $0 > file }' "$fullPath/$dataFile"
+        {   rowMatched = 0
+        if      (op == "="  && $col != val) rowMatched = 1
+        else if (op == ">"  && $col <=  val) rowMatched = 1
+        else if (op == "<"  && $col >=  val) rowMatched = 1
+        else if (op == ">=" && $col < val) rowMatched = 1
+        else if (op == "<=" && $col > val) rowMatched = 1
+        else if (op == "!=" && $col == val) rowMatched = 1 
+        
+        if(rowMatched == 1)
+            print $0 > file 
+        }' "$fullPath/$dataFile"
 
         if [[ $(wc -l < "$fullPath/$dataFile.tmp") -lt $(wc -l < "$fullPath/$dataFile") ]]
         then
