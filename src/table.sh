@@ -386,6 +386,7 @@ function deleteFromTable() {
     then
         fullPath=$DATABASES_PATH/$SELECTED_DATABASE
         dataFile="$tableName.txt"
+        metadataFile=".$tableName-md.txt"
 
         while true
         do
@@ -402,13 +403,25 @@ function deleteFromTable() {
 
         while true
         do
+            columnType=`awk  -v col="$columnName" 'BEGIN{FS=":"}{if ($1 == col) print $2}' $fullPath/$metadataFile`
             read -p "Enter the operator: " operator
-            if [[ -n $operator && $operator =~ ^(">"|"<"|"="|">="|"<="|"!=")$ ]]
+            if [[ $columnType == "int" || $columnType == "float" || $columnType == "date" ]] 
             then
-                break
+                if [[ -n $operator && $operator =~ ^(">"|"<"|"="|">="|"<="|"!=")$ ]]
+                then
+                    break
+                else
+                    echo "Invalid operator, you must enter a valid operator for a numeric field (>, <, =, >=, <=, !=)" >&2
+                fi
             else
-                echo "Invalid operator, you must enter a valid operator (>, <, =, >=, <=, !=)" >&2
+                if [[ -n $operator && $operator =~ ^("="|"!=")$ ]]
+                then
+                    break
+                else
+                    echo "Invalid operator, you must enter a valid operator (=, !=)" >&2
+                fi
             fi
+            
         done
         
         while true

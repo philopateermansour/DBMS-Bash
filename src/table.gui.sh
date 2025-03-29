@@ -160,13 +160,15 @@ function deleteFromTable() {
     
     while true
     do
-        operator=`zenity --list --title="Columns List" --text="Columns in $tableName" --column="operator" \
-        "=" \
-        "!=" \
-        ">" \
-        "<"\
-        ">=" \
-        "<="`
+        columnType=`awk  -v col="$columnName" 'BEGIN{FS=":"}{if ($1 == col) print $2}' $fullPath/$metadataFile`
+        if [[ "$columnType" == "int" || "$columnType" == "float" || $columnType == "date" ]] 
+        then
+            operator=`zenity --list --title="Operators List" --text="select an operator for $columnName" \
+            --column="operator" "=" "!=" ">" "<" ">=" "<="`
+        else
+            operator=`zenity --list --title="Operators List" --text="select an operator for $columnName" \
+            --column="operator" "=" "!="`
+        fi
         if [[ $? == 0 ]]
         then
             break
@@ -182,7 +184,7 @@ function deleteFromTable() {
         then
             break
         else
-            zenity --error --text="Invalid value, please enter a value (nt empty)"
+            zenity --error --text="Invalid value, please enter a value (not empty)"
         fi
     done
 
