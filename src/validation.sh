@@ -32,43 +32,20 @@ function isColumnExists() {
 }
 
 function validatePositiveInteger() {
-
-    if  [[ $1 =~ ^[0-9]+$ ]] &&  [ $1 -ne 0 ] 
-    then
-        echo 1
-    else
-        echo 0
-    fi
+    [[ ($1 =~ ^[0-9]+$) && ($1 -ne 0) ]] && echo 1 || echo 0
 }
 
 function validateDataType() {
-
-    if [[ $1 == "str" || $1 == "int" || $1 == "float" || $1 == "char" || $1 == "bool" || $1 == "date" ]] 
-    then
-        echo 1
-    else
-        echo 0
-    fi
+    [[ $1 == "str" || $1 == "int" || $1 == "float" || $1 == "char" || $1 == "bool" || $1 == "date" ]]  && echo 1 || echo 0
 }
 
 function validateName() {
-    if [[ "$1" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]
-    then
-        echo 1
-    else
-        echo 0
-    fi
+    [[ "$1" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]] && echo 1 || echo 0
 }
 
 function validateForeignKey() {
-    
     isExists=`isTableExists $1`
-    if [[ $isExists == 1 ]] && grep -q "$2" "$DATABASES_PATH/$SELECTED_DATABASE/.$1-md.txt"
-    then
-        echo 1
-    else
-        echo 0
-    fi
+    [[ $isExists == 1 ]] && grep -q "$2" "$DATABASES_PATH/$SELECTED_DATABASE/.$1-md.txt" && echo 1 || echo 0
 }
 
 function validateString() {
