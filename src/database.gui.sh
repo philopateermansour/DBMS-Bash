@@ -76,56 +76,44 @@ function databaseMenu() {
     "Back to main menu") SELECTED_DATABASE=''; return 1;;
     esac
 }
-function addUser() {
-    if [[ $EUID -ne 0 ]]
-    then
-        zenity --error --text="This function need be run as root" 
-        return
-    fi
-    
+
+function addDatabaseUser() {
+    [[ $USER == "root" ]] || { zenity --error --text="This function need be run as root"; exit 1; }
+
     userName=`zenity --entry --title="Add User" --text="Enter username:" --ok-label="Add"`
 
-    if [[ -z $userName ]]
-    then
-        zenity --error --text="No username provided"
-        return
-    fi
-    
-    userExists=` grep "^$userName:" /etc/passwd | awk -F: '{print $1}' `
-    
-    if [[ -z $userExists ]]
-    then
-        zenity --error --text="User $userName does not exist"
-        return
-    fi
+    [[ -z $userName ]] && { zenity --error --text="No username provided"; return; }
 
-    if groups "$userName" | grep -qw "$GROUP" 
+    getent passwd "$userName" > /dev/null || { zenity --error --text="User '$userName' does not exist"; return; }
+
+    groups "$userName" | grep -qw "$DATABASE_GROUP"
+    [[ $? -eq 0 ]] && { zenity --error --text="User '$userName' is already in the group"; return; }
+
+    sudo usermod -aG "$DATABASE_GROUP" "$userName" && zenity --info --text="User '$userName' added to group '$DATABASE_GROUP'."
+}
+
+function initDatabase() {
+    grep -qw "$DATABASE_GROUP" /etc/group
+    if [[ $? -ne 0 ]]
     then
-        zenity --error --text="User $userName is already a user"
-        return
+        sudo groupadd "$DATABASE_GROUP"
+        [[ $? -eq 0 ]] && echo "[INFO]: Database group $DATABASE_GROUP created successfully."
     fi
 
-    if  ! grep -qw "$GROUP" /etc/group  
+    if [[ ! -d $DATABASES_PATH ]]
     then
-        groupadd "$GROUP"
-        zenity --info --text="Group $GROUP created."
+        mkdir "$DATABASES_PATH"
+        chown :$DATABASE_GROUP "$DATABASES_PATH"
+        [[ $? -eq 0 ]] && echo "[INFO]: Databases directory created successfully."
+
+        chmod +s "$DATABASES_PATH"
+        [[ $? -eq 0 ]] && echo "[INFO]: Setgid bit set on $DATABASES_PATH."
     fi
 
-    usermod -aG "$GROUP" "$userName"
-    zenity --info --text="User $userName added to group $GROUP."
+    setfacl -R -m g:$DATABASE_GROUP:rwx "$DATABASES_PATH"
+    setfacl -R -m g:$DATABASE_GROUP:rwx "$DBMS_PATH"
+    echo "[INFO]: ACL permissions applied to $DATABASES_PATH."
+    echo "[INFO]: ACL permissions applied to $DBMS_PATH."
 
-    setfacl -R -m g:$GROUP:rwx "$DBMS_PATH"
-    zenity --info --text="ACL permissions applied to $DBMS_PATH."
-
-    HOME_OWNER=$(ls -ld "..$HOME_DIR" | awk '{print $3}')
-    HOME_DIR="/home/$HOME_OWNER"
-    setfacl -m g:$GROUP:rx "$HOME_DIR"
-    zenity --info --text="Traversal permissions set on $HOME_DIR."
-    
-    zenity --info --text="Setup complete (just make sure that the project path is accessible by the group)"
-
-
-    
-
-
+    zenity --info --text="Database setup completed successfully. just make sure that the project path is accessible by the group"
 }

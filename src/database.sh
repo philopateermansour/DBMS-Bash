@@ -118,54 +118,46 @@ function dropDatabase() {
 
     read -p 'Press ENTER to return to the main menu'
 }
-function addUser() {
-    if [[ $EUID -ne 0 ]]
-    then
-        echo "This function need be run as root" >&2
-        exit
-    fi
-    
+
+function addDatabaseUser() {
+    [[ $USER == "root" ]] || { echo "This function must be run as root." >&2; exit 1; }
+
     read -p "Enter username: " userName
+    [[ -z $userName ]] && { echo "No username provided." >&2; read -p "Press ENTER to return to the main menu"; return; }
 
-    if [[ -z $userName ]]
-    then
-        echo "No username provided" >&2
-        read -p 'Press ENTER to return to the main menu'
-        return
-    fi
-    
-    userExists=` grep "^$userName:" /etc/passwd | awk -F: '{print $1}' `
-    
-    if [[ -z $userExists ]]
-    then
-        echo "User $userName does not exist" >&2
-        read -p 'Press ENTER to return to the main menu'
-        return
-    fi
+    getent passwd "$userName" > /dev/null || { echo "User '$userName' does not exist." >&2; read -p "Press ENTER to return to the main menu"; return; }
 
-    if groups "$userName" | grep -qw "$GROUP" 
+    groups "$userName" | grep -qw "$DATABASE_GROUP"
+    [[ $? -eq 0 ]] && { echo "User '$userName' is already in the group." >&2; read -p "Press ENTER to return to the main menu"; return; }
+
+    sudo usermod -aG "$DATABASE_GROUP" "$userName" && echo "User '$userName' added to group '$DATABASE_GROUP'."
+    read -p "Press ENTER to return to the main menu"
+}
+
+
+function initDatabase() {
+    grep -qw "$DATABASE_GROUP" /etc/group
+    if [[ $? -ne 0 ]]
     then
-        echo "User $userName is already a user" >&2
-        read -p 'Press ENTER to return to the main menu'
-        return
+        sudo groupadd "$DATABASE_GROUP"
+        [[ $? -eq 0 ]] && echo "[INFO]: Database group $DATABASE_GROUP created successfully."
     fi
 
-    if  ! grep -qw "$GROUP" /etc/group  
+    if [[ ! -d $DATABASES_PATH ]]
     then
-        groupadd "$GROUP"
-        echo "Group $GROUP created."
+        mkdir "$DATABASES_PATH"
+        chown :$DATABASE_GROUP "$DATABASES_PATH"
+        [[ $? -eq 0 ]] && echo "[INFO]: Databases directory created successfully."
+
+        chmod +s "$DATABASES_PATH"
+        [[ $? -eq 0 ]] && echo "[INFO]: Setgid bit set on $DATABASES_PATH."
     fi
 
-    usermod -aG "$GROUP" "$userName"
-    echo "User $userName added to group $GROUP."
+    setfacl -R -m g:$DATABASE_GROUP:rwx "$DATABASES_PATH"
+    setfacl -R -m g:$DATABASE_GROUP:rwx "$DBMS_PATH"
+    echo "[INFO]: ACL permissions applied to $DATABASES_PATH."
+    echo "[INFO]: ACL permissions applied to $DBMS_PATH."
 
-    setfacl -R -m g:$GROUP:rwx "$DBMS_PATH"
-    echo "ACL permissions applied to $DBMS_PATH."
-
-    HOME_OWNER=$(ls -ld "..$HOME_DIR" | awk '{print $3}')
-    HOME_DIR="/home/$HOME_OWNER"
-    setfacl -m g:$GROUP:rx "$HOME_DIR"
-    echo "Traversal permissions set on $HOME_DIR."
-    echo "Setup complete (just make sure that the project path is accessible by the group)" >&1
-    read -p 'Press ENTER to return to the main menu'
+    echo "[INFO]: Database setup completed successfully. just make sure that the project path is accessible by the group"
+    read -p 'Press ENTER to continue...'
 }

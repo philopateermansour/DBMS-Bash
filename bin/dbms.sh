@@ -2,38 +2,44 @@
 
 shopt -s extglob
 source ../src/config.sh
-xhost +SI:localuser:$USER
+
+DBMS_PATH=`dirname "$PWD"`
+SELECTED_DATABASE=''
 
 function main() {
     if [[ $1 == "--gui" ]]
     then
         source ../src/database.gui.sh
-        
-        if ! groups "$USER" | grep -qw "$GROUP" && [[ "$USER" != "root" ]]
-        then
-            zenity --error --text="User $USER is not able to run this app."
-            exit
-        fi
+        initDatabase
+
+        [[ `groups "$USER" | grep -qw "$GROUP"` || $USER == "root" ]] || {
+            zenity --error --text="You are not authorized to run this application.\
+            \nPlease contact your system administrator." --width=400
+            exit 1
+        }
 
         zenity --info --width=400 --text="This database management system provides essential tools for efficient data handling and organization.\
         \n\nDeveloped by:\n- Philopateer Mansour\n- Muhamad Mamoun\n\nThis software is licensed under the MIT License." --title="Software License & Contributors"
 
         while true; do graphicalMainMenu; done
+
     elif [[ $1 == "--cli" ]]
     then
         source ../src/database.sh
+        initDatabase
 
-        if ! groups "$USER" | grep -qw "$GROUP" && [[ "$USER" != "root" ]]
-        then
-            echo "User $USER is not able to run this app." >&2
-            exit
-        fi
+        [[ `groups "$USER" | grep -qw "$GROUP"` || $USER == "root" ]] || {
+            echo "You are not authorized to run this application." >&2
+            echo "Please contact your system administrator." >&2
+            exit 1
+        }
 
-        echo -e "Software License & Contributors\n\nThis database management system provides essential tools for efficient data handling and organization.\
+        clear; echo -e "Software License & Contributors\n\nThis database management system provides essential tools for efficient data handling and organization.\
         \n\nDeveloped by:\n- Philopateer Mansour\n- Muhamad Mamoun\n\nThis software is licensed under the MIT License."
         read -p 'Press ENTER to continue...'
 
         while true; do terminalMainMenu; done
+
     else
         echo "Invalid argument, use --gui or --cli only" >&2
         exit 1
@@ -50,7 +56,7 @@ function graphicalMainMenu() {
     "List all databases") listDatabases;;
     "Connect to a database") connectToDatabase;;
     "Drop a database") dropDatabase;;
-    "Add user") addUser;;
+    "Add user") addDatabaseUser;;
     @("Exit"|"")) echo "Good Bye, $USER."; exit 0;;
     esac
 }
@@ -67,7 +73,7 @@ function terminalMainMenu() {
         2) listDatabases; break;;
         3) connectToDatabase; break;;
         4) dropDatabase; break;;
-        5) addUser; break;;
+        5) addDatabaseUser; break;;
         6) echo "Good Bye, $USER."; exit 0;;
         *) echo 'Invalid option number, try again...';;
         esac
