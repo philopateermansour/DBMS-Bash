@@ -211,3 +211,184 @@ function deleteFromTable() {
         zenity --error --text="Record not found in the specified column"
     fi
 }
+function insertIntoTable() {
+    while true
+    do
+        tables=`ls $DATABASES_PATH/$SELECTED_DATABASE`
+        tables=`sed 's/.txt//g' <<< $tables`
+        tableName=`zenity --list --title="Tables List" --text="Tables in $SELECTED_DATABASE database"\
+        --column="Tables" $tables`
+        if [[ $? == 0 ]]
+        then
+            break
+        else
+            zenity --error --text="You have to select table."
+        fi
+    done
+    while true
+    do
+        if [[ -z $tableName ]]
+        then
+            zenity --error --text="You have to select table."
+            return
+        fi
+        isValid=`validateName "$tableName"` 
+        if [[ $isValid == 1 ]]
+        then
+            break
+        else
+            zenity --error --text="Invalid name, name must start with a character and contain alphanumeric characters and underscores only"
+        fi
+        isExists=`isTableExists $tableName`
+        if [[ $isExists == 1 ]]
+        then
+            break
+        else
+            zenity --error --text="Table $tableName does not exist in database $SELECTED_DATABASE"
+        fi
+    done
+
+    fullPath=$DATABASES_PATH/$SELECTED_DATABASE
+    metadataFile=".$tableName-md.txt"
+    dataFile="$tableName.txt"
+    
+    columns=()
+    types=()
+    uniques=()
+    ai=()
+    pkIndex=-1
+    i=-1
+
+    while IFS=: read -r column type primaryKey autoIncrement unique
+    do
+        columns+=($column)
+        types+=($type)
+        ((i+=1))
+        if [[ $primaryKey == 1 ]]
+        then
+            pkIndex=$i
+        fi
+        if [[ $unique == 1 ]]
+        then
+            uniques+=($i)
+        fi
+        if [[ $autoIncrement == 1 ]]
+        then
+            ai+=($i)
+        fi
+    done < "$fullPath/$metadataFile"
+
+    values=""
+    noOfFields=${#columns[@]}
+    for ((i=0; i<$noOfFields; i++))
+    do
+        columnName="${columns[$i]}"
+        columnType="${types[$i]}"
+        
+        while true 
+        do
+            value=`zenity --entry --title="Insert into $tableName" --text="Enter value for $columnName ($columnType):"`
+
+            if [[ $columnType == "int" ]] 
+            then
+                if [[ " ${ai[*]} " =~ " $i " ]]
+                then
+                    if [[ -z $value ]]
+                    then
+                        value=`awk -F: -v col="$((i+1))" '
+                        {
+                            if ($col > max) 
+                                max = $col
+                        }
+                        END{
+                            print max + 1
+                        }' "$fullPath/$dataFile"`
+                    else
+                        if [[ $(validateInteger "$value") == 0 ]]
+                        then
+                            zenity --error --text="Invalid value, you must send number or leave it empty and it will be automatic assignment"
+                            continue
+                        fi
+                    fi
+                
+                elif [[ $(validateInteger "$value") == 0 ]]
+                then
+                    zenity --error --text="Invalid value, you must send number"
+                    continue
+                fi
+
+            elif [[ $columnType == "str" && $(validateString "$value") == 0 ]] 
+            then
+                zenity --error --text="Invalid value, string cannot be empty or and can only contain letters, numbers, underscores, and spaces"
+                continue
+
+            elif [[ $columnType == "float" && $(validateFloat "$value") == 0 ]] 
+            then
+                zenity --error --text="Invalid value, you must send a float"
+                continue
+
+            elif [[ $columnType == "bool" && $(validateBoolean "$value") == 0 ]] 
+            then
+                zenity --error --text="Invalid value, you must send a boolean (true/false)"
+                continue
+
+            elif [[ $columnType == "date" && $(validateDate "$value") == 0 ]] 
+            then
+                zenity --error --text="Invalid value, you must send a valid date (MM/DD/YYYY)"
+                continue
+
+            elif [[ $columnType == "char" && $(validateChar "$value") == 0 ]] 
+            then
+                zenity --error --text="Invalid value, you must send a single character"
+                continue
+            fi
+
+            if [[ $i -eq $pkIndex ]] 
+            then
+                if ! awk -F: -v pk="$(($pkIndex + 1))" -v val="$value" '
+                {
+                if ($pk == val) 
+                    exit 1}
+                ' "$fullPath/$dataFile"
+                then
+                    zenity --error --text="Primary key has to be a unique value"
+                    continue
+                fi
+            fi
+
+            for uniqueIndex in "${uniques[@]}"
+            do
+                if [[ $i == $uniqueIndex ]]
+                then
+                    if awk -F: -v col="$((uniqueIndex+1))" -v val="$value" '
+                    {
+                        if ($col == val) 
+                            exit 1
+                    }
+                    ' "$fullPath/$dataFile"
+                    then
+                        break
+                    else
+                        zenity --error --text="Value must be unique"
+                        continue 2
+                    fi
+                fi
+            done
+        
+
+            if [[ -z "$values" ]]
+            then
+                values="$value"
+            else
+                values+=":$value"
+            fi 
+            break
+
+        done
+    done
+
+    echo $values >> "$fullPath/$dataFile"
+
+    zenity --info --text="Record inserted successfully"
+
+}

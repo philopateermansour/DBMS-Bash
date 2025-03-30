@@ -80,7 +80,7 @@ function addUser() {
     if [[ $EUID -ne 0 ]]
     then
         zenity --error --text="This function need be run as root" 
-        exit
+        return
     fi
     
     userName=`zenity --entry --title="Add User" --text="Enter username:" --ok-label="Add"`
