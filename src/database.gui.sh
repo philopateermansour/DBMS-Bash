@@ -18,6 +18,7 @@ function createDatabase() {
             zenity --error --text='Database already exists'
         else
             mkdir "$DATABASES_PATH/$databaseName"
+            chmod +t "$DATABASES_PATH/$databaseName"
         fi
     fi
 }
@@ -45,7 +46,15 @@ function dropDatabase() {
 
     case $databaseName in
     "") zenity --error --text="No database selected";;
-    *) rm -rf "$DATABASES_PATH/$databaseName";
+    *)  dbPath="$DATABASES_PATH/$databaseName"
+        currentUser=`whoami`
+        owner=`ls -ld $dbPath | awk '{print $3}'`
+        if [[ $currentUser != $owner ]]
+        then
+            zenity --error --text="You are not the owner of this database, you can't drop it"
+            return
+        fi
+        rm -rf $dbPath;
        zenity --info --text="Database $databaseName dropped successfully";;
     esac
 }
@@ -66,4 +75,57 @@ function databaseMenu() {
     "Update a table") updateTable;;
     "Back to main menu") SELECTED_DATABASE=''; return 1;;
     esac
+}
+function addUser() {
+    if [[ $EUID -ne 0 ]]
+    then
+        zenity --error --text="This function need be run as root" 
+        exit
+    fi
+    
+    userName=`zenity --entry --title="Add User" --text="Enter username:" --ok-label="Add"`
+
+    if [[ -z $userName ]]
+    then
+        zenity --error --text="No username provided"
+        return
+    fi
+    
+    userExists=` grep "^$userName:" /etc/passwd | awk -F: '{print $1}' `
+    
+    if [[ -z $userExists ]]
+    then
+        zenity --error --text="User $userName does not exist"
+        return
+    fi
+
+    if groups "$userName" | grep -qw "$GROUP" 
+    then
+        zenity --error --text="User $userName is already a user"
+        return
+    fi
+
+    if  ! grep -qw "$GROUP" /etc/group  
+    then
+        groupadd "$GROUP"
+        zenity --info --text="Group $GROUP created."
+    fi
+
+    usermod -aG "$GROUP" "$userName"
+    zenity --info --text="User $userName added to group $GROUP."
+
+    setfacl -R -m g:$GROUP:rwx "$DBMS_PATH"
+    zenity --info --text="ACL permissions applied to $DBMS_PATH."
+
+    HOME_OWNER=$(ls -ld "..$HOME_DIR" | awk '{print $3}')
+    HOME_DIR="/home/$HOME_OWNER"
+    setfacl -m g:$GROUP:rx "$HOME_DIR"
+    zenity --info --text="Traversal permissions set on $HOME_DIR."
+    
+    zenity --info --text="Setup complete (just make sure that the project path is accessible by the group)"
+
+
+    
+
+
 }

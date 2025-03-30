@@ -70,17 +70,7 @@ function createTable() {
         pkSet=0
         aiSet=0
         uniqueSet=0
-        fkReference="0"
 
-        if [[ "$columnType" == "int" ]] 
-        then
-            read -p "Do you want $columnName to auto-increment (yes for confirmation, anything else to cancel): " isAutoIncrement
-            if [[ $isAutoIncrement =~ ^[yY]([eE]?[sS]?)$ ]] 
-            then
-                aiSet=1
-            fi
-        fi
-        
         if [[ -z $primaryKeyColumn ]] 
         then
             read -p "Do you want $columnName to be the primary key (yes for confirmation, anything else to cancel): " isPrimaryKey
@@ -90,7 +80,16 @@ function createTable() {
                 primaryKeyColumn="$columnName"
             fi
         fi
-
+        
+        if [[ "$columnType" == "int" ]] 
+        then
+            read -p "Do you want $columnName to auto-increment (yes for confirmation, anything else to cancel): " isAutoIncrement
+            if [[ $isAutoIncrement =~ ^[yY]([eE]?[sS]?)$ ]] 
+            then
+                aiSet=1
+            fi
+        fi
+        
         if [[ $pkSet == 0 ]]
         then
             read -p "Do you want $columnName to be unique (yes for confirmation, anything else to cancel): " isUnique
@@ -100,24 +99,8 @@ function createTable() {
             fi
         fi
 
-        read -p "Do you want $columnName to be a foreign key (yes for confirmation, anything else to cancel): " isForeignKey
-        if [[ $isForeignKey =~ ^[yY]([eE]?[sS]?)$ ]] 
-        then
-            while true 
-            do
-                read -p "Enter the referenced table: " foreignKeyTable
-                read -p "Enter the referenced column: " foreignKeyColumn
-                if [[ `validateForeignKey $foreignKeyTable $foreignKeyColumn` == 1 ]]
-                then
-                    fkReference="$foreignKeyTable.$foreignKeyColumn"
-                    break
-                else
-                    echo "Invalid key, make sure of the table and key" >&2
-                fi
-            done
-        fi
 
-        metadata+="$columnName:$columnType:$pkSet:$aiSet:$uniqueSet:$fkReference\n"
+        metadata+="$columnName:$columnType:$pkSet:$aiSet:$uniqueSet\n"
     done
 
     echo -e "$metadata" >> $fullPath/$mdFile
@@ -185,9 +168,10 @@ function insertIntoTable() {
     columns=()
     types=()
     uniques=()
+    ai=()
     pkIndex=-1
     i=-1
-    while IFS=: read -r column type primaryKey autoIncrement unique foreignKey
+    while IFS=: read -r column type primaryKey autoIncrement unique
     do
         columns+=($column)
         types+=($type)
@@ -199,6 +183,10 @@ function insertIntoTable() {
         if [[ $unique == 1 ]]
         then
             uniques+=($i)
+        fi
+        if [[ $autoIncrement == 1 ]]
+        then
+            ai+=($i)
         fi
     done < "$fullPath/$metadataFile"
 
@@ -214,37 +202,55 @@ function insertIntoTable() {
         do
             read -r -p "Enter value for $columnName ($columnType): " value
 
-            if [[ $columnType == "int" && $(validateInteger "$value") == 0  ]] 
+            if [[ $columnType == "int" ]] 
             then
-                echo "Invalid value, you must send number" >&2
-                continue
-            fi
+                if [[ " ${ai[*]} " =~ " $i " ]]
+                then
+                    if [[ -z $value ]]
+                    then
+                        value=`awk -F: -v col="$((i+1))" '
+                        {
+                            if ($col > max) 
+                                max = $col
+                        }
+                        END{
+                            print max + 1
+                        }' "$fullPath/$dataFile"`
+                    else
+                        if [[ $(validateInteger "$value") == 0 ]]
+                        then
+                            echo "Invalid value, you must send number or leave it empty and it will be automatic assignment" >&2
+                            continue
+                        fi
+                    fi
+                
+                elif [[ $(validateInteger "$value") == 0 ]]
+                then
+                    echo "Invalid value, you must send number" >&2
+                    continue
+                fi
 
-            if [[ $columnType == "str" && $(validateString "$value") == 0 ]] 
+            elif [[ $columnType == "str" && $(validateString "$value") == 0 ]] 
             then
                 echo "Invalid value, string cannot be empty or and can only contain letters, numbers, underscores, and spaces" >&2
                 continue
-            fi
 
-            if [[ $columnType == "float" && $(validateFloat "$value") == 0 ]] 
+            elif [[ $columnType == "float" && $(validateFloat "$value") == 0 ]] 
             then
                 echo "Invalid value, you must send a float" >&2
                 continue
-            fi
 
-            if [[ $columnType == "bool" && $(validateBoolean "$value") == 0 ]] 
+            elif [[ $columnType == "bool" && $(validateBoolean "$value") == 0 ]] 
             then
                 echo "Invalid value, you must send true or false" >&2
                 continue
-            fi
 
-            if [[ $columnType == "date" && $(validateDate "$value") == 0 ]] 
+            elif [[ $columnType == "date" && $(validateDate "$value") == 0 ]] 
             then
                 echo "Invalid value, you must send a valid date (MM/DD/YYYY)" >&2
                 continue
-            fi
 
-            if [[ $columnType == "char" && $(validateChar "$value") == 0 ]] 
+            elif [[ $columnType == "char" && $(validateChar "$value") == 0 ]] 
             then
                 echo "Invalid value, you must send a single character" >&2
                 continue

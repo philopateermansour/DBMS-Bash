@@ -27,6 +27,7 @@ function createDatabase() {
 
         if [[ $? == 0 ]]
         then
+            chmod +t "$DATABASES_PATH/$databaseName"
             echo 'Database created successfully' >&1
         else
             echo 'An error occurred. Please try again later' >&2
@@ -95,7 +96,16 @@ function dropDatabase() {
 
     if [[ $isExists == 1 ]]
     then
-        rm -r "$DATABASES_PATH/$databaseName"
+        dbPath="$DATABASES_PATH/$databaseName"
+        currentUser=`whoami`
+        owner=`ls -ld $dbPath | awk '{print $3}'`
+        if [[ $currentUser != $owner ]]
+        then
+            echo "You are not the owner of this database, you can't drop it" >&2
+            read -p 'Press ENTER to return to the main menu'
+            return
+        fi
+        rm -r $dbPath
         if [[ $? == 0 ]]
         then
             echo "Database $databaseName dropped" >&1
@@ -106,5 +116,56 @@ function dropDatabase() {
         echo 'Database does not exist' >&2
     fi
 
+    read -p 'Press ENTER to return to the main menu'
+}
+function addUser() {
+    if [[ $EUID -ne 0 ]]
+    then
+        echo "This function need be run as root" >&2
+        exit
+    fi
+    
+    read -p "Enter username: " userName
+
+    if [[ -z $userName ]]
+    then
+        echo "No username provided" >&2
+        read -p 'Press ENTER to return to the main menu'
+        return
+    fi
+    
+    userExists=` grep "^$userName:" /etc/passwd | awk -F: '{print $1}' `
+    
+    if [[ -z $userExists ]]
+    then
+        echo "User $userName does not exist" >&2
+        read -p 'Press ENTER to return to the main menu'
+        return
+    fi
+
+    if groups "$userName" | grep -qw "$GROUP" 
+    then
+        echo "User $userName is already a user" >&2
+        read -p 'Press ENTER to return to the main menu'
+        return
+    fi
+
+    if  ! grep -qw "$GROUP" /etc/group  
+    then
+        groupadd "$GROUP"
+        echo "Group $GROUP created."
+    fi
+
+    usermod -aG "$GROUP" "$userName"
+    echo "User $userName added to group $GROUP."
+
+    setfacl -R -m g:$GROUP:rwx "$DBMS_PATH"
+    echo "ACL permissions applied to $DBMS_PATH."
+
+    HOME_OWNER=$(ls -ld "..$HOME_DIR" | awk '{print $3}')
+    HOME_DIR="/home/$HOME_OWNER"
+    setfacl -m g:$GROUP:rx "$HOME_DIR"
+    echo "Traversal permissions set on $HOME_DIR."
+    echo "Setup complete (just make sure that the project path is accessible by the group)" >&1
     read -p 'Press ENTER to return to the main menu'
 }
