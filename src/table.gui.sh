@@ -424,12 +424,13 @@ function selectFromTable() {
         return
     }
 
-    columnsHeader=`awk 'BEGIN{FS=":"}{print $1}
-    ' $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt | tr '\n' ' '`
+    zenityArgs=()
+    Headers=()
+    Data=()
 
-    zenityArgs=""
-    for ((i=1;i<=$numberOfColumns;i++))
-    {
+    for ((i=0;i<$numberOfColumns;i++))
+    do
+        currentHeader=`awk -v columnNumber="$i" 'BEGIN{FS=":"}{if (NR == (columnNumber + 1)) print $1}' $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt`
         data=`awk -v columnNumber="$columnNumber" -v val="$columnValue" -v condition="$conditionOperator" -v selectedIndex="$i" '
         BEGIN {FS=":"}
         {
@@ -441,13 +442,97 @@ function selectFromTable() {
             else if (condition == "<=" && $columnNumber <= val) rowMatched = 1
             else if (condition == "!=" && $columnNumber != val) rowMatched = 1
 
-            if (rowMatched == 1) print $selectedIndex
+            if (rowMatched == 1) print $(selectedIndex+1)
         }' $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt`
 
-        zenityArgs+=(--column="${columnsHeader[$i]}" "$data")
-    }
-
-    formattedData=`echo "$data" | tr ':' ' '`
+        zenityArgs+=("--column=$currentHeader")
+        zenityArgs+=("$data")
+    done
 
     zenity --list --title="Selection Result" --text="SELECT * FROM $tableName WHERE $selectCondition" "${zenityArgs[@]}" --width=800 --height=400
+}
+
+function updateTable() {
+    tables=`ls $DATABASES_PATH/$SELECTED_DATABASE`
+    tables=`sed 's/.txt//g' <<< $tables`
+    tableName=`zenity --list --title="Tables List" --text="Tables in $SELECTED_DATABASE database"\
+    --column="Tables" $tables`
+
+    if [[ -z $tableName ]]
+    then
+        zenity --error --text="You have to select table."
+        return
+    fi
+
+    columnName=`zenity --entry --title="Update table" --text="Enter column name to update:"`
+
+    if [[ -z $columnName ]]
+    then
+        zenity --error --text="You have to select column."
+        return
+    fi
+
+    columnNumber=`isColumnExists $tableName $columnName`
+    [[ $columnNumber =~ ^[0-9]+$ && $columnNumber -ne 0 ]] && : || {
+        zenity --error --text="Column $columnName does not exist in table $tableName"
+        return
+    }
+
+    oldValue=`zenity --entry --title="Update table" --text="Enter old value:"`
+    if [[ -z $oldValue ]]
+    then
+        zenity --error --text="You have to select old value."
+        return
+    fi
+
+    newValue=`zenity --entry --title="Update table" --text="Enter new value:"`
+    if [[ -z $newValue ]]
+    then
+        zenity --error --text="You have to select new value."
+        return
+    fi
+
+    columnDataType=`getColumnDataType $tableName $columnName`
+    if [[ "$columnType" == "int" && $(validateInteger "$newValue") == 0 ]] 
+    then
+        zenity --error --text="Invalid value, you must send number"
+        return
+    elif [[ "$columnType" == "str" && $(validateString "$newValue") == 0 ]] 
+    then
+        zenity --error --text="Invalid value, string cannot be empty or and can only contain letters, numbers, underscores, and spaces"
+        return
+    elif [[ "$columnType" == "float" && $(validateFloat "$newValue") == 0 ]] 
+    then
+        zenity --error --text="Invalid value, you must send a float"
+        return
+    elif [[ "$columnType" == "bool" && $(validateBoolean "$newValue") == 0 ]] 
+    then
+        zenity --error --text="Invalid value, you must send a boolean (true/false)"
+        return
+    elif [[ "$columnType" == "date" && $(validateDate "$newValue") == 0 ]] 
+    then
+        zenity --error --text="Invalid value, you must send a valid date (MM/DD/YYYY)"
+        return
+    elif [[ "$columnType" == "char" && $(validateChar "$newValue") == 0 ]] 
+    then
+        zenity --error --text="Invalid value, you must send a single character"
+        return
+    fi
+
+    awk -v col="$columnNumber" -v oldVal="$oldValue" -v newVal="$newValue" '
+    BEGIN {FS=":"; OFS=":"}
+    {
+        if ($col == oldVal) $col = newVal
+        print $0
+    }' "$DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt" > "$DATABASES_PATH/$SELECTED_DATABASE/$tableName.tmp"
+    mv "$DATABASES_PATH/$SELECTED_DATABASE/$tableName.tmp" "$DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt"
+    zenity --info --text="Record updated successfully"
+}
+
+function getColumnDataType() {
+    awk -v fieldName=$2 '
+    BEGIN {FS=":"}
+    {
+        if($1 == fieldName) print $2
+    }' $DATABASES_PATH/$SELECTED_DATABASE/.$1-md.txt
 }
