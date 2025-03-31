@@ -343,9 +343,9 @@ function selectFromTable() {
 
     read -p 'Enter condition value: ' value
 
-    numberOfColumns=`wc -l $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt`
+    numberOfColumns=`wc -l $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt | cut -d' ' -f1`
 
-    awk -v columnCounter="${numberOfColumns[@]:0:1}" '
+    awk -v columnCounter="$numberOfColumns" '
     BEGIN{
         FS=":"
         for(counter=0; counter<columnCounter; counter++) printf "\b------------------"
@@ -359,7 +359,7 @@ function selectFromTable() {
     }
     ' $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt 
 
-    awk -v columnNumber="$columnNumber" -v val="$value" -v condition="$selectCondition" -v columnCounter="${numberOfColumns[@]:0:1}" '
+    awk -v columnNumber="$columnNumber" -v val="$value" -v condition="$selectCondition" -v columnCounter="$numberOfColumns" '
     BEGIN {FS=":"}
     {
         rowMatched = 0

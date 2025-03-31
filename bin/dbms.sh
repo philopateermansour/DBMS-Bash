@@ -12,7 +12,8 @@ function main() {
         source ../src/database.gui.sh
         initDatabase
 
-        [[ `groups "$USER" | grep -qw "$GROUP"` || $USER == "root" ]] || {
+        groups "$USER" | grep -qw "$GROUP"
+        [[ $? == 0 || $USER == "root" ]] || {
             zenity --error --text="You are not authorized to run this application.\
             \nPlease contact your system administrator." --width=400
             exit 1
@@ -28,7 +29,8 @@ function main() {
         source ../src/database.sh
         initDatabase
 
-        [[ `groups "$USER" | grep -qw "$GROUP"` || $USER == "root" ]] || {
+        groups "$USER" | grep -qw "$GROUP"
+        [[ $? == 0 || $USER == "root" ]] || {
             echo "You are not authorized to run this application." >&2
             echo "Please contact your system administrator." >&2
             exit 1

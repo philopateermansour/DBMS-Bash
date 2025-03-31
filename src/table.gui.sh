@@ -392,3 +392,62 @@ function insertIntoTable() {
     zenity --info --text="Record inserted successfully"
 
 }
+
+function selectFromTable() {
+    tables=`ls $DATABASES_PATH/$SELECTED_DATABASE`
+    tables=`sed 's/.txt//g' <<< $tables`
+
+    tableName=`zenity --list --title="Tables List" --text="Tables in $SELECTED_DATABASE database"\
+    --column="Tables" $tables`
+
+    if [[ -z $tableName ]]
+    then
+        zenity --error --text="You have to select table."
+        return
+    fi
+
+    numberOfColumns=`wc -l $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt | cut -d' ' -f1`
+    selectCondition=`zenity --entry --title="Select from table" --text="Enter select condition [e.g. column-name = value]:" --ok-label="Select" --cancel-label="Cancel" --width=400 --height=200`
+
+    columnName=`echo $selectCondition | awk '{print $1}'`
+    conditionOperator=`echo $selectCondition | awk '{print $2}'`
+    columnValue=`echo $selectCondition | awk '{print $3}'`
+
+    columnNumber=`isColumnExists $tableName $columnName`
+    [[ $columnNumber =~ ^[0-9]+$ && $columnNumber -ne 0 ]] && : || {
+        zenity --error --text="Column $columnName does not exist in table $tableName"
+        return
+    }
+
+    [[ $conditionOperator =~ ^(">"|"<"|"="|">="|"<="|"!=")$ ]] && : || {
+        zenity --error --text="Invalid condition"
+        return
+    }
+
+    columnsHeader=`awk 'BEGIN{FS=":"}{print $1}
+    ' $DATABASES_PATH/$SELECTED_DATABASE/.$tableName-md.txt | tr '\n' ' '`
+
+    zenityArgs=""
+    for ((i=1;i<=$numberOfColumns;i++))
+    {
+        data=`awk -v columnNumber="$columnNumber" -v val="$columnValue" -v condition="$conditionOperator" -v selectedIndex="$i" '
+        BEGIN {FS=":"}
+        {
+            rowMatched = 0
+            if      (condition == "="  && $columnNumber == val) rowMatched = 1
+            else if (condition == ">"  && $columnNumber >  val) rowMatched = 1
+            else if (condition == "<"  && $columnNumber <  val) rowMatched = 1
+            else if (condition == ">=" && $columnNumber >= val) rowMatched = 1
+            else if (condition == "<=" && $columnNumber <= val) rowMatched = 1
+            else if (condition == "!=" && $columnNumber != val) rowMatched = 1
+
+            if (rowMatched == 1) print $selectedIndex
+        }' $DATABASES_PATH/$SELECTED_DATABASE/$tableName.txt`
+
+        zenityArgs+=(--column="${columnsHeader[$i]}" "$data")
+    }
+
+    formattedData=`echo "$data" | tr ':' ' '`
+
+    zenity --list --title="Selection Result" --text="SELECT * FROM $tableName WHERE $selectCondition" "${zenityArgs[@]}" --width=800 --height=400
+}
