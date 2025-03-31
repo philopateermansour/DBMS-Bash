@@ -137,7 +137,11 @@ function deleteFromTable() {
     tables=`sed 's/.txt//g' <<< $tables`
     tableName=`zenity --list --title="Tables List" --text="Tables in $SELECTED_DATABASE database"\
     --column="Tables" $tables`
-    
+    if [[ $? != 0 ]]
+        then
+            zenity --error --text="You have to select table."
+            return
+    fi
     fullPath=$DATABASES_PATH/$SELECTED_DATABASE
     dataFile="$tableName.txt"
     metadataFile=".$tableName-md.txt"
@@ -155,6 +159,7 @@ function deleteFromTable() {
             break
         else
             zenity --error --text="You have to select column."
+            return
         fi
     done
     
@@ -174,6 +179,7 @@ function deleteFromTable() {
             break
         else
             zenity --error --text="You have to select operator."
+            return
         fi
     done
 
@@ -185,6 +191,7 @@ function deleteFromTable() {
             break
         else
             zenity --error --text="Invalid value, please enter a value (not empty)"
+            return
         fi
     done
 
@@ -223,6 +230,7 @@ function insertIntoTable() {
             break
         else
             zenity --error --text="You have to select table."
+            return
         fi
     done
     while true
@@ -238,6 +246,7 @@ function insertIntoTable() {
             break
         else
             zenity --error --text="Invalid name, name must start with a character and contain alphanumeric characters and underscores only"
+            return
         fi
         isExists=`isTableExists $tableName`
         if [[ $isExists == 1 ]]
@@ -245,6 +254,7 @@ function insertIntoTable() {
             break
         else
             zenity --error --text="Table $tableName does not exist in database $SELECTED_DATABASE"
+
         fi
     done
 
@@ -307,40 +317,40 @@ function insertIntoTable() {
                         if [[ $(validateInteger "$value") == 0 ]]
                         then
                             zenity --error --text="Invalid value, you must send number or leave it empty and it will be automatic assignment"
-                            continue
+                            return
                         fi
                     fi
                 
                 elif [[ $(validateInteger "$value") == 0 ]]
                 then
                     zenity --error --text="Invalid value, you must send number"
-                    continue
+                    return
                 fi
 
             elif [[ $columnType == "str" && $(validateString "$value") == 0 ]] 
             then
                 zenity --error --text="Invalid value, string cannot be empty or and can only contain letters, numbers, underscores, and spaces"
-                continue
+                return
 
             elif [[ $columnType == "float" && $(validateFloat "$value") == 0 ]] 
             then
                 zenity --error --text="Invalid value, you must send a float"
-                continue
+                return
 
             elif [[ $columnType == "bool" && $(validateBoolean "$value") == 0 ]] 
             then
                 zenity --error --text="Invalid value, you must send a boolean (true/false)"
-                continue
+                return
 
             elif [[ $columnType == "date" && $(validateDate "$value") == 0 ]] 
             then
                 zenity --error --text="Invalid value, you must send a valid date (MM/DD/YYYY)"
-                continue
+                return
 
             elif [[ $columnType == "char" && $(validateChar "$value") == 0 ]] 
             then
                 zenity --error --text="Invalid value, you must send a single character"
-                continue
+                return
             fi
 
             if [[ $i -eq $pkIndex ]] 
